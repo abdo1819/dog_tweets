@@ -1,0 +1,138 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+
+
+
+\title{wrangle report}
+\author{abdo hashem}
+\date{August 2020}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+	this document is brief about main points in wrangling the data required for 
+	dogs rating project, information doesn't include code but has an overview about the problems and possible solution for and related functions for detailed code refer to notebook for code implementation 
+\end{abstract}
+
+\section{gathering the data}
+during data gathering there was three sources of data the goal here is to convert those data into a pandas data\_frame and save them as CSV file that can be loaded easily
+\subsection{the data sources }
+\begin{description}
+	\item[local file] : here i used the pandas \href{https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html}{pandas.read\_csv} function
+	\item[web files] this required the `requests` library which has functionality to download the file then used the pandas read\_csv to get the data frame taking 
+	into account that we have a tsv with sepration `sep='\t'`
+	\item[twiter api] here i used the `tweepy` library the loading steps are the following
+	\begin{enumerate}
+		\item use key from tweeter api to get authonication
+		\item iterate over the tweet\_id 
+		\item use tweet\_id  to get the json and save it in one line
+	\end{enumerate}
+	finishing the previous steps we now have tweet.txt we use this to constract a
+	dataframe by making dictionary of 
+	\begin{itemize}
+		\item tweet\_id 
+		\item number retweets
+		\item number of likes
+	\end{itemize}
+\end{description}
+
+
+\section{assessing/cleangin the twiter archive}
+in assessing the data i tried to check from most to least important problems
+\subsection{the rating}
+\subsubsection{problems}
+the dogs rating hade sevral issues caused by poor extraction and the nature of the tweet text 
+those problem can be summarized as following
+\begin{description}
+	\item[float ratings ] some rates has decimal point for example 
+	\lstinline{13.5/10} which will be reported as \lstinline{5/10}
+	\item[rating like text] here some text has same form as rating for example \lstinline{24/7} or date like  \lstinline{4/20}
+	\item[two ratings] this is most confusing as tweet photo has two dogs and the tweet give a rating for every one of them
+	\item[joking] another tricky rating happens when giving strangely very high or low rating 
+	then giving the actual rate examples at tweet\_id 835246439529840640
+	\begin{quote}
+		ok jomny I know you're excited 
+		but 960/00 isn't a valid rating, 13/10 is tho	
+	\end{quote}
+\end{description}
+\subsubsection{solutions}
+solving those problems drives some wild choices for example the two rating case which  happened 
+many times and required looking at the photos but others where much easier and had lucky general way so the cleaning went as following
+\begin{description}
+	
+	\item[float ratings ] use regex that takes into account the decimal point \newline
+	({\color{red} \lstinline{\d+\.?\d*}}
+	\textcolor{green}{\lstinline{\/}}
+	{\color{red} \lstinline{\d+\.?\d*}})
+	\item[rating like text] this can be handled by removing those spotted rating like text.
+	but luckily in all cases the real rating was written at the end so i had only to take the last 
+	rate at the tweet 
+	\item[two ratings] here i only took the first rating hoping it represents the recognized dog \ref{take_first}
+	\item[joking] had the same luck as\emph{ rating like text} and taking the last rate was enough 
+\end{description}
+
+\subsection{dog stages}
+\subsubsection{problem}
+\begin{itemize}
+	\item dog stages had critical tidiness issue as the column name were used to indicate the stage by giving a dog the stage name or the None if it isn't in this stage
+	\item another issue appears after tidying the data that some dogs had two stages
+	      or a photo has two dogs 
+\end{itemize}
+
+\subsubsection{solution}
+\begin{description}
+	\item[tidiness problem] using pandas \lstinline{melt} function we can get those stages into one column we can then remove those with None value 
+	\item[duplication problem ] following same approach as in \cite{first_sol} we can take only the first stage mentioned as it is most likely to represent the first rated dog
+\end{description}
+
+\subsection{extra data}
+those data extracted using Twitter API can be merged to the archive as it represents related
+information to the tweet
+
+\subsection{retweets and comments}
+some tuples doesn't represent original tweets such as comments and retweets
+
+\subsection{extra cleaning issues }
+complex values in source column
+ 
+\subsection{data types}
+wrong data types in  timestamp which is date time  and dog stages as  categorical 
+ 
+
+\section{image predictions}
+\subsection{dog breed}
+the main point of the image prediction data frame is to get the dog breed which was recorded 
+as multilevel prediction about the content of image with confidence to each prediction and 
+whither it is breed or not this represent two problems
+\begin{itemize}
+	\item a tidiness issue as dog breed had to be a one column with value representing 
+	      the breed itself 
+	\item dirty tweets that had no dogs at all in the three predictions 
+	      
+	      \subsubsection{solution}
+	      
+	      \begin{description}
+	      	\item[tidiness problem] we can get the dog breed easily by getting the first prediction representing a breed as we have only three prediction
+	      	\begin{lstlisting}
+    1. change false breeds in `p1,p2,p3` columns with null
+    2. use `combine` to get columns with non null value between `p1,p2`
+    3. repeat 2 for `last_result,p3`
+    4. drop useless old columns 
+	      	\end{lstlisting}
+	      	
+	      	\item[no breed images] those can simply be dropped
+	      \end{description}
+	      
+\end{itemize}
+
+
+
+
+
+
+\end{document}
